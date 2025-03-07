@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jewelry Recommendation System</title>
+    <style>
+        body {
+            font-family: 'Playfair Display', serif;
+            background: linear-gradient(135deg, #f5f1ed 0%, #e8e4df 100%);
+            margin: 0;
+            padding: 40px;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c2522;
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h3 {
+            color: #5c4033;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        /* Container Styling */
+        .image-container {
+            display: flex;
+            flex-wrap: nowrap; /* Ensures single row */
+            gap: 30px;
+            justify-content: flex-start;
+            margin-top: 40px;
+            overflow-x: auto; /* Horizontal scroll if content exceeds width */
+            padding-bottom: 10px; /* Space for scrollbar */
+        }
+
+        .image-box {
+            text-align: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            flex: 0 0 auto; /* Prevents shrinking or growing */
+        }
+
+        .image-box:hover {
+            transform: translateY(-5px);
+        }
+
+        img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            border: 2px solid #d4a373;
+            object-fit: cover;
+        }
+
+        /* Selection and Upload Styling */
+        div {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        select, input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #d4a373;
+            border-radius: 5px;
+            font-size: 1em;
+            background: #fff;
+            color: #5c4033;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        button {
+            background: #d4a373;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: #f0aa65;
+        }
+
+        /* Results Section */
+        #results {
+            padding: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .image-box {
+                width: 150px; /* Smaller width for mobile */
+            }
+            img {
+                max-width: 150px; /* Adjust image size for mobile */
+                max-height: 150px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            body {
+                padding: 20px;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Jewelry Recommendation System</h1>
+    
+    <!-- Category Selection -->
+    <div>
+        <h3>Select Jewelry Category</h3>
+        <select id="category">
+            <option value="rings">Rings</option>
+            <option value="bangles">Bangles</option>
+            <option value="noserings">Noserings</option>
+            <option value="earrings">Earrings</option>
+            <option value="mangalsutras">Mangalsutras</option>
+        </select>
+    </div>
+    
+    <!-- Image Upload -->
+    <div>
+        <h3>Upload Image</h3>
+        <input type="file" id="imageUpload" accept="image/*">
+        <button onclick="uploadImage()">Upload</button>
+    </div>
+
+    <div id="results" class="image-container"></div>
+
+    <script>
+        function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const category = document.getElementById('category').value;
+            const file = fileInput.files[0];
+            if (!file) return alert('Please select an image');
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('category', category);
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(displayResults)
+            .catch(error => console.error('Error:', error));
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            if (data.error) {
+                resultsDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+                return;
+            }
+            resultsDiv.innerHTML = `
+                <div class="image-box">
+                    <h3>Query Image</h3>
+                    <img src="data:image/jpeg;base64,${data.query_image}">
+                </div>
+            `;
+            data.recommended_images.forEach((img, index) => {
+                resultsDiv.innerHTML += `
+                    <div class="image-box">
+                        <h3>Recommendation ${index + 1}</h3>
+                        <img src="data:image/jpeg;base64,${img}">
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
