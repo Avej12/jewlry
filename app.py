@@ -15,7 +15,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # AWS S3 Configuration
 S3_BUCKET = os.getenv("AWS_BUCKET_NAME")
-S3_REGION = os.getenv("S3_REGION_NAME")
+S3_REGION = 'ap-south-1'
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 
