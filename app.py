@@ -72,6 +72,8 @@ def fetch_image_from_s3(image_key):
         logger.error(f"Failed to fetch image {image_key} from S3: {e}")
         return None
 
+torch.set_num_threads(1)
+
 def extract_clip_features(image):
     inputs = processor(images=image, return_tensors="pt").to(device)
     with torch.no_grad():
