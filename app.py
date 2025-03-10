@@ -72,16 +72,11 @@ def fetch_image_from_s3(image_key):
         logger.error(f"Failed to fetch image {image_key} from S3: {e}")
         return None
 
-def preprocess_image(image, target_size=(224, 224)):
-    return image.resize(target_size)
-
 def extract_clip_features(image):
-    image = preprocess_image(image)
     inputs = processor(images=image, return_tensors="pt").to(device)
     with torch.no_grad():
         features = clip_model.get_image_features(**inputs)
     return features.squeeze().cpu().numpy()
-
 
 def build_faiss_index(image_keys, category):
     if not image_keys:
@@ -168,24 +163,19 @@ def index_page():
 def upload_image():
     category = request.form.get('category')
     file = request.files.get('image')
-
+    
     if not category or category not in CATEGORIES or not file:
         return jsonify({'error': 'Invalid input'}), 400
-
+    
     query_image = Image.open(file).convert("RGB")
-    query_image = preprocess_image(query_image)  # Resize to lower resolution
+    query_base64 = image_to_base64(query_image)  # Convert query image to base64
+    
     recommended_images = get_similar_images(query_image, category)
 
-    # Optionally, encode and return the query image as well (if needed)
-    query_buffer = BytesIO()
-    query_image.save(query_buffer, format="JPEG")
-    query_base64 = base64.b64encode(query_buffer.getvalue()).decode('utf-8')
-
     return jsonify({
-        'query_image': query_base64,
-        'recommended_images': recommended_images
+        'query_image': query_base64,  # Include query image in base64 format
+        'recommended_images': [image_to_base64(fetch_image_from_s3(img)) for img in recommended_images if img]
     })
-
 
 if __name__ == '__main__':
     app.run(debug=True)
