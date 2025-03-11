@@ -76,7 +76,7 @@ def extract_clip_features(image):
     inputs = processor(images=image, return_tensors="pt").to(device)
     with torch.no_grad():
         features = clip_model.get_image_features(**inputs)
-    return features.squeeze().cpu().numpy()
+    return features.squeeze().cpu().numpy()  # Unnormalized, as per your original setup
 
 def build_faiss_index(image_keys, category):
     if not image_keys:
@@ -96,7 +96,7 @@ def build_faiss_index(image_keys, category):
     pickle.dump(valid_images, open(os.path.join(DATA_FOLDER, f"{category}_image_paths.pkl"), "wb"))
     
     dimension = features.shape[1]
-    index = faiss.IndexFlatL2(dimension)
+    index = faiss.IndexFlatL2(dimension)  # Keep L2 as per your original code
     index.add(features)
     faiss.write_index(index, os.path.join(DATA_FOLDER, f"{category}_faiss_index.bin"))
     logger.info(f"FAISS index for {category} built and saved")
@@ -124,28 +124,42 @@ for category in CATEGORIES:
     features_dict[category] = features
     image_paths_dict[category] = image_paths
 
+def compute_cosine_similarity(vec1, vec2):
+    """Calculate cosine similarity between two vectors."""
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+    if norm1 == 0 or norm2 == 0:  # Avoid division by zero
+        return 0.0
+    return dot_product / (norm1 * norm2)
+
 def get_similar_images(query_image, category, top_k=5):
     if category not in indexes or indexes[category] is None:
         logger.error(f"No valid index for category {category}")
         return []
-
+    
     query_embedding = extract_clip_features(query_image).astype(np.float32).reshape(1, -1)
-    distances, indices = indexes[category].search(query_embedding, top_k + 1)  # Retrieve one extra result
-
-    recommended_images = [
-        image_paths_dict[category][i] for i in indices[0][1:top_k+1]  # Skip the first result
-        if i < len(image_paths_dict[category])
-    ]
-    return recommended_images
-
+    distances, indices = indexes[category].search(query_embedding, top_k + 1)  # Get top_k + 1 to skip the first
+    
+    # Compute cosine similarities and skip the first result
+    query_vec = query_embedding[0]
+    recommended_images = []
+    for i, idx in enumerate(indices[0][1:]):  # Skip the first index (0), start from 1
+        if idx < len(image_paths_dict[category]):
+            img_path = image_paths_dict[category][idx]
+            db_vec = features_dict[category][idx]
+            similarity = compute_cosine_similarity(query_vec, db_vec)
+            recommended_images.append((img_path, similarity))
+    
+    return recommended_images[:top_k]  # Ensure we return only top_k items
 
 def image_to_base64(img):
     try:
-        if isinstance(img, Image.Image):  # If image is a PIL image
+        if isinstance(img, Image.Image):
             buffered = BytesIO()
             img.save(buffered, format="JPEG")
             return base64.b64encode(buffered.getvalue()).decode('utf-8')
-        elif isinstance(img, str) and os.path.exists(img):  # If image is a file path
+        elif isinstance(img, str) and os.path.exists(img):
             with open(img, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode('utf-8')
         else:
@@ -168,13 +182,18 @@ def upload_image():
         return jsonify({'error': 'Invalid input'}), 400
     
     query_image = Image.open(file).convert("RGB")
-    query_base64 = image_to_base64(query_image)  # Convert query image to base64
+    query_base64 = image_to_base64(query_image)
     
     recommended_images = get_similar_images(query_image, category)
-
+    
+    recommended_data = [
+        {'image': image_to_base64(fetch_image_from_s3(img_path)), 'similarity': float(sim)}
+        for img_path, sim in recommended_images if img_path
+    ]
+    
     return jsonify({
-        'query_image': query_base64,  # Include query image in base64 format
-        'recommended_images': [image_to_base64(fetch_image_from_s3(img)) for img in recommended_images if img]
+        'query_image': query_base64,
+        'recommended_images': recommended_data
     })
 
 if __name__ == '__main__':
