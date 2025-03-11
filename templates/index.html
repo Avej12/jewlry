@@ -26,15 +26,14 @@
             margin-bottom: 15px;
         }
 
-        /* Container Styling */
         .image-container {
             display: flex;
-            flex-wrap: nowrap; /* Ensures single row */
+            flex-wrap: nowrap;
             gap: 30px;
             justify-content: flex-start;
             margin-top: 40px;
-            overflow-x: auto; /* Horizontal scroll if content exceeds width */
-            padding-bottom: 10px; /* Space for scrollbar */
+            overflow-x: auto;
+            padding-bottom: 10px;
         }
 
         .image-box {
@@ -44,7 +43,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
-            flex: 0 0 auto; /* Prevents shrinking or growing */
+            flex: 0 0 auto;
         }
 
         .image-box:hover {
@@ -59,7 +58,12 @@
             object-fit: cover;
         }
 
-        /* Selection and Upload Styling */
+        .image-box p {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #5c4033;
+        }
+
         div {
             background: rgba(255, 255, 255, 0.9);
             padding: 25px;
@@ -103,18 +107,16 @@
             background: #f0aa65;
         }
 
-        /* Results Section */
         #results {
             padding: 20px;
         }
 
-        /* Responsive Design */
         @media (max-width: 768px) {
             .image-box {
-                width: 150px; /* Smaller width for mobile */
+                width: 150px;
             }
             img {
-                max-width: 150px; /* Adjust image size for mobile */
+                max-width: 150px;
                 max-height: 150px;
             }
             h1 {
@@ -130,7 +132,6 @@
 <body>
     <h1>Jewelry Recommendation System</h1>
     
-    <!-- Category Selection -->
     <div>
         <h3>Select Jewelry Category</h3>
         <select id="category">
@@ -142,7 +143,6 @@
         </select>
     </div>
     
-    <!-- Image Upload -->
     <div>
         <h3>Upload Image</h3>
         <input type="file" id="imageUpload" accept="image/*">
@@ -183,11 +183,12 @@
                     <img src="data:image/jpeg;base64,${data.query_image}">
                 </div>
             `;
-            data.recommended_images.forEach((img, index) => {
+            data.recommended_images.forEach((item, index) => {
                 resultsDiv.innerHTML += `
                     <div class="image-box">
                         <h3>Recommendation ${index + 1}</h3>
-                        <img src="data:image/jpeg;base64,${img}">
+                        <img src="data:image/jpeg;base64,${item.image}">
+                        <p>Similarity: ${(item.similarity * 100).toFixed(2)}%</p>
                     </div>
                 `;
             });
